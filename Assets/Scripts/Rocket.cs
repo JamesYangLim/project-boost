@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public enum State
@@ -23,6 +24,7 @@ public class Rocket : MonoBehaviour
     Rigidbody _rb;
     AudioSource _as;
     State _state;
+    bool _isCollisionDisable;
 
     // Start is called before the first frame update
     void Start()
@@ -34,6 +36,11 @@ public class Rocket : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (Debug.isDebugBuild)
+        {
+            ResponseToDebugKeys();
+        }
+
         if (_state == State.Alive)
         {
             RespondToThrustInput();
@@ -41,8 +48,21 @@ public class Rocket : MonoBehaviour
         }
     }
 
+    private void ResponseToDebugKeys()
+    {
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            LoadNextScene();
+        }
+        else if (Input.GetKeyDown(KeyCode.C))
+        {
+            _isCollisionDisable = !_isCollisionDisable;
+        }
+    }
+
     private void OnCollisionEnter(Collision collision)
     {
+        if (_isCollisionDisable) return;
         if (_state != State.Alive) return;
 
         switch (collision.gameObject.tag)
@@ -85,7 +105,13 @@ public class Rocket : MonoBehaviour
 
     private void LoadNextScene()
     {
-        SceneManager.LoadScene(1);
+        var activeSceneIndex = SceneManager.GetActiveScene().buildIndex;
+        var nextSceneIndex = activeSceneIndex + 1;
+        if (nextSceneIndex == SceneManager.sceneCountInBuildSettings)
+        {
+            nextSceneIndex = 0;
+        }
+        SceneManager.LoadScene(nextSceneIndex);
     }
 
     private void RespondToThrustInput()
@@ -113,7 +139,7 @@ public class Rocket : MonoBehaviour
 
     private void RespondToRotateInput()
     {
-        _rb.freezeRotation = true; // manually control rotation
+        _rb.angularVelocity = Vector3.zero;
 
         var rotationInThisFrame = rcsThrust * Time.deltaTime;
 
@@ -125,8 +151,6 @@ public class Rocket : MonoBehaviour
         {
             transform.Rotate(-Vector3.forward * rotationInThisFrame);
         }
-
-        _rb.freezeRotation = false; // resume physics control of rotation
     }
 
 }
